@@ -363,3 +363,28 @@ Casos confirmados, agrupados aqui por subsistema:
 Cada correção deve começar por um teste de regressão do caso correspondente. Para rewind, incluir conteúdo do índice, arquivos ausentes, links, Unicode, worktrees e projetos sem Git. Para auditoria, testar equivalência entre CLI, UI e MCP e distinguir relatórios parciais de uma aprovação de todo o projeto.
 
 Esta revisão identifica defeitos reproduzidos e limites específicos; não certifica ausência de outros bugs, compatibilidade com todas as versões/linguagens nem execução real de todas as integrações externas.
+
+## Complemento — auditoria técnica recebida em 2026-10-11
+
+Os itens abaixo foram comparados com a branch `fix/vibeguard-critical-audit`; várias observações da auditoria recebida descreviam uma versão anterior do código.
+
+### Correções já presentes na branch antes deste complemento
+
+- Mensagem de remediação de stubs sem truncamento (`vibeguard/drift.py`).
+- Configuração e geração padrão incluindo Go, Rust e Java (`.vibeguard.json`, `vibeguard/config.py` e `vibeguard/cli.py`).
+- Normalização de caminhos MCP rejeitando caminhos que escapam da raiz do projeto (`vibeguard/mcp.py`).
+- Rejeição de regras com `id`, `description` ou `rule_type` vazios (`vibeguard/config.py`).
+- Rate limiting para requisições HTTP e imports lazy do pacote (`vibeguard/server.py`, `vibeguard/__init__.py`).
+
+### Melhorias aplicadas neste complemento
+
+- O rate limiter agora usa relógio monotônico, sincroniza atualizações concorrentes e limita o número de clientes mantidos em memória.
+- `get_prompt()` informa explicitamente `has_baseline` e marca o resumo como não ancorado quando ainda não existe baseline. A análise sem baseline continua sendo um modo suportado; ela não exige uma exceção.
+- Os metadados de versão do pacote têm uma única origem em `vibeguard.__version__`; a configuração PEP 621 do `pyproject.toml` fornece a versão dinamicamente e `setup.py` ficou somente como shim de compatibilidade, sem metadados duplicados.
+- Foram adicionados testes para configuração multilíngue criada por `init`, traversal MCP, mensagem completa de remediação, regras inválidas, análise sem baseline, limitação HTTP e limite de estado do rate limiter.
+
+### Itens que permanecem como manutenção futura
+
+- A estimativa de cobertura e os valores de complexidade da auditoria recebida não vieram acompanhados de relatórios reproduzíveis; não são tratados como métricas verificadas.
+- A proposta de refatorar `PythonVisitor._handle_func` é de manutenção, sem uma falha de comportamento demonstrada. Deve ser feita em uma mudança dedicada, preservando os testes de parser existentes.
+- Logging estruturado também é uma melhoria opcional; a saída atual da CLI é voltada ao usuário e não deve ser convertida em logging sem um requisito de operação definido.

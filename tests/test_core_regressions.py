@@ -219,6 +219,7 @@ pub fn ping() -> u8 { 1 }
                      {"max_cyclomatic_complexity": -1}, {"fail_on_secret_leak": "false"},
                      {"protected_paths": "*.py"}, {"ignored_paths": [1]}, {"project_name": None},
                      {"rules": [None]}, {"rules": [{"severity": "fatal"}]},
+                     {"rules": [{"id": ""}]}, {"rules": [{"description": "  "}]},
                      {"rules": [{"parameters": []}]}, {"rules": [{"target_patterns": "*.py"}]},
                      {"rules": [{"rule_type": "max_lines", "parameters": {"max": None}}]},
                      {"rules": [{"rule_type": "forbidden_import", "parameters": {"forbidden": "mock"}}]}]:
