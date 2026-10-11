@@ -27,10 +27,19 @@ def _tool_def(name: str, desc: str, props: Dict[str, Any], req: Optional[List[st
 
 
 def _norm_path(p: str, root: Path) -> str:
+    """Safely normalize path within project root. Blocks path traversal attempts."""
+    root_resolved = root.resolve()
+    candidate = Path(p)
+    if not candidate.is_absolute():
+        candidate = root_resolved / candidate
+
     try:
-        return str(Path(p).resolve().relative_to(root))
-    except Exception:
-        return os.path.relpath(p, str(root)) if os.path.isabs(p) else str(p)
+        resolved = candidate.resolve(strict=False)
+        rel = resolved.relative_to(root_resolved)
+    except (ValueError, RuntimeError) as exc:
+        raise ValueError(f"Path traversal attack detected: {p} escapes project root") from exc
+
+    return str(rel).replace("\\", "/")
 
 
 def _norm_files(raw: Any, root: Path) -> Optional[List[str]]:
@@ -121,11 +130,11 @@ class MCPServer:
         if args.get("staged") or args.get("diff"):
             flag = "staged" if args.get("staged") else "diff"
             if not git_helper.is_git_repo():
-                return {"total_findings": 0, "critical_count": 0, "error_count": 1, "warning_count": 0, "findings": [_finding("git_error", "error", "Not a git repo", f"Cannot check {flag} outside git.", "Run git init.", None, str(root))], "has_blocking_errors": True, "summary": "Not a git repo.", "message": f"Cannot check {flag} outside git."}
+                return {"total_findings": 0, "critical_count": 0, "error_count": 1, "warning_count": 0, "findings": [_finding("git_error", "error", "Not a git repo", f"Cannot check {flag} outside a git repository", "Initialize git repository with 'git init'")], "has_blocking_errors": True, "summary": f"Not a git repo"}
             files = git_helper.get_staged_files() if args.get("staged") else git_helper.get_changed_files()
             if not files:
                 msg = f"No {flag} files found in git." if flag == "staged" else "Working tree clean. No changed files to check."
-                return {"total_findings": 0, "critical_count": 0, "error_count": 0, "warning_count": 0, "findings": [], "has_blocking_errors": False, "summary": msg, "message": msg, "ai_prompt": f"✅ {msg}"}
+                return {"total_findings": 0, "critical_count": 0, "error_count": 0, "warning_count": 0, "findings": [], "has_blocking_errors": False, "summary": msg, "message": msg, "ai_prompt": msg}
             target_files = files
         elif raw_files:
             target_files = _norm_files(raw_files, root)
@@ -159,7 +168,7 @@ class MCPServer:
 
         blocking = [f for f in findings if f["severity"] in ("critical", "error")]
         is_valid = len(blocking) == 0
-        summary = f"Validation failed with {len(blocking)} blocking issue(s)." if not is_valid else (f"Validation passed with {len(findings)} non-blocking warning(s)." if findings else "Validation passed! Proposed code satisfies invariants.")
+        summary = f"Validation failed with {len(blocking)} blocking issue(s)." if not is_valid else (f"Validation passed with {len(findings)} non-blocking warning(s)." if findings else "Validation passed successfully.")
         return {
             "valid": is_valid, "file_path": rel_path, "total_findings": len(findings),
             "blocking_count": len(blocking), "warning_count": len(findings) - len(blocking),
@@ -182,7 +191,7 @@ class MCPServer:
                 if target.is_file():
                     content = target.read_text(encoding="utf-8", errors="replace")
                     fa = CodeAnalyzer.analyze_file(rel_path, content)
-                    contracts[rel_path] = {"language": fa.language, "total_lines": fa.total_lines, "symbols": [{"name": s.name, "kind": s.kind, "line_number": s.line_number, "parameters": s.parameters, "is_exported": s.is_exported, "complexity": s.complexity} for s in fa.symbols]}
+                    contracts[rel_path] = {"language": fa.language, "total_lines": fa.total_lines, "symbols": [{"name": s.name, "kind": s.kind, "line_number": s.line_number, "parameters": s.parameters} for s in fa.symbols]}
             else:
                 snapshot = engine.create_snapshot()
                 for p, finfo in snapshot.files.items():
@@ -280,8 +289,6 @@ class MCPServer:
                         out_stream.flush()
                 break
             if buf.strip():
-                # Keep legacy pretty-printed input, but resynchronize when a
-                # complete new protocol message follows an unfinished one.
                 try:
                     next_message = json.loads(line)
                 except json.JSONDecodeError:
@@ -346,4 +353,3 @@ def install_antigravity_config(config_path: Optional[Path] = None) -> Path:
 def run_mcp_server(in_stream: Optional[TextIO] = None, out_stream: Optional[TextIO] = None, project_path: Optional[str] = None) -> int:
     MCPServer(project_path=project_path).run_loop(in_stream or sys.stdin, out_stream or sys.stdout)
     return 0
-
