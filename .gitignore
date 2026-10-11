@@ -1,0 +1,21 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+.DS_Store
+
+# VibeGuard runtime artifacts
+.vibeguard/checkpoints/
+*.patch
+vibeguard-remediation.patch
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/

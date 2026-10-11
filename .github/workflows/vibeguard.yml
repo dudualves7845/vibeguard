@@ -1,0 +1,35 @@
+name: VibeGuard
+
+on:
+  pull_request:
+    branches: [ main, master ]
+  push:
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  vibeguard-ci:
+    name: VibeGuard Invariant & Drift Guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run VibeGuard CI
+        uses: vibe-guard/vibeguard@v1
+        with:
+          fail-on-drift: 'true'
+          comment-pr: 'true'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          create-patch: 'true'
+          baseline-file: '.vibeguard/baseline.json'

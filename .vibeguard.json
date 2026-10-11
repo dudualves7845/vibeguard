@@ -1,0 +1,42 @@
+{
+  "project_name": "vibeguard",
+  "protected_paths": [
+    "*.py",
+    "*.js",
+    "*.ts",
+    "*.jsx",
+    "*.tsx"
+  ],
+  "ignored_paths": [
+    ".git/*",
+    "node_modules/*",
+    "__pycache__/*",
+    ".venv/*",
+    "venv/*",
+    "*.pyc",
+    ".vibeguard/*",
+    "tests/*"
+  ],
+  "max_file_lines": 400,
+  "fail_on_hallucinated_imports": true,
+  "fail_on_ghost_declarations": true,
+  "fail_on_secret_leak": true,
+  "rules": [
+    {
+      "id": "no-mock-in-production",
+      "description": "Do not import unittest.mock inside production source modules",
+      "rule_type": "forbidden_import",
+      "target_patterns": [
+        "vibeguard/*.py",
+        "src/*.py"
+      ],
+      "parameters": {
+        "forbidden": [
+          "unittest.mock",
+          "mock"
+        ]
+      },
+      "severity": "warning"
+    }
+  ]
+}

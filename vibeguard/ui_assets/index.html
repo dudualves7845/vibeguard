@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VibeGuard — AI Vibe Coding Invariant & Drift Engine</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <!-- Top Navigation Navbar -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-logo">🛡️</div>
+      <div class="brand-text">
+        <h1>VibeGuard <span class="version-tag">v1.0.0</span></h1>
+        <p>AI Vibe Coding Invariant & Drift Engine</p>
+      </div>
+    </div>
+
+    <div class="project-bar">
+      <span>📁</span>
+      <span id="active-project-path" class="project-path">Loading project...</span>
+      <button id="btn-open-switch-modal" class="btn btn-secondary btn-sm" title="Switch active project directory">Change...</button>
+    </div>
+
+    <div class="status-indicator">
+      <span id="header-status-badge" class="badge badge-info">CONNECTING</span>
+    </div>
+  </header>
+
+  <!-- Action Toolbar -->
+  <section class="toolbar">
+    <div class="toolbar-left">
+      <select id="select-scope" class="select-scope">
+        <option value="full">⚡ Entire Codebase</option>
+        <option value="staged">🛡️ Git Staged Files Only</option>
+        <option value="diff">📝 Git Changed Files (Diff)</option>
+      </select>
+      <button id="btn-run-check" class="btn btn-primary">
+        <span>🔍</span> Run Check
+      </button>
+      <button id="btn-update-baseline" class="btn btn-secondary">
+        <span>📸</span> Update Baseline
+      </button>
+      <button id="btn-toggle-hook" class="btn btn-secondary">
+        <span>🛡️</span> Install Hook
+      </button>
+    </div>
+
+    <div class="toolbar-right">
+      <button id="btn-copy-badge" class="btn btn-secondary" title="Copy Markdown badge for README.md">
+        <span>🏷️</span> Copy Badge
+      </button>
+      <button id="btn-copy-prompt" class="btn btn-secondary">
+        <span>📋</span> Copy AI Prompt
+      </button>
+      <button id="btn-download-patch" class="btn btn-secondary">
+        <span>💾</span> Download Patch
+      </button>
+      <button id="btn-refresh" class="btn btn-secondary btn-sm" title="Refresh">
+        <span>🔄</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- Main Container -->
+  <main class="container">
+    <!-- Baseline Status Banner -->
+    <div id="baseline-status-banner" class="baseline-banner" style="display: none;"></div>
+
+    <!-- Metric Cards -->
+    <section class="metrics-grid">
+      <div class="metric-card" id="card-status">
+        <div class="metric-header">
+          <span class="metric-title">Drift Status</span>
+          <span id="status-indicator-dot" class="status-dot warning"></span>
+        </div>
+        <div id="metric-status-val" class="metric-value">Pending Check</div>
+        <div id="metric-status-desc" class="metric-desc">Click 'Run Check' to audit codebase</div>
+      </div>
+
+      <div class="metric-card" id="card-symbols">
+        <div class="metric-header">
+          <span class="metric-title">Protected Symbols</span>
+          <span>📐</span>
+        </div>
+        <div id="metric-symbols-val" class="metric-value">--</div>
+        <div id="metric-symbols-desc" class="metric-desc">Functions, classes & contracts</div>
+      </div>
+
+      <div class="metric-card" id="card-baseline">
+        <div class="metric-header">
+          <span class="metric-title">Baseline Snapshot</span>
+          <span>📸</span>
+        </div>
+        <div id="metric-baseline-val" class="metric-value">--</div>
+        <div id="metric-baseline-desc" class="metric-desc">Checking baseline status...</div>
+      </div>
+
+      <div class="metric-card" id="card-hook">
+        <div class="metric-header">
+          <span class="metric-title">Git Pre-Commit Hook</span>
+          <span>🔒</span>
+        </div>
+        <div id="metric-hook-val" class="metric-value">--</div>
+        <div id="metric-hook-desc" class="metric-desc">Automated drift protection</div>
+      </div>
+    </section>
+
+    <!-- Tabs Navigation -->
+    <nav class="tabs-nav">
+      <button class="tab-btn active" data-tab="tab-findings">
+        Findings & Drift Audit <span id="badge-findings-count" class="tab-badge">0</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-symbols">
+        Contracts & Symbols Explorer <span id="badge-symbols-count" class="tab-badge">0</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-dependencies">
+        Dependencies Audit <span id="badge-deps-count" class="tab-badge">0</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-invariants">
+        Invariants & Rules
+      </button>
+      <button class="tab-btn" data-tab="tab-prompt">
+        AI Remediation Prompt
+      </button>
+      <button class="tab-btn" data-tab="tab-rewind">
+        ⏪ Vibe Rewind <span id="badge-rewind-count" class="tab-badge">0</span>
+      </button>
+    </nav>
+
+    <!-- Tab 1: Findings & Drift Audit -->
+    <div id="tab-findings" class="tab-pane active">
+      <div class="tab-filter-bar">
+        <div class="filter-group">
+          <button class="filter-chip active" data-filter="all">All Findings</button>
+          <button class="filter-chip" data-filter="critical">Critical</button>
+          <button class="filter-chip" data-filter="error">Errors</button>
+          <button class="filter-chip" data-filter="warning">Warnings</button>
+        </div>
+        <input type="text" id="search-findings" class="search-input" placeholder="Search findings by file, message, title...">
+      </div>
+
+      <div id="findings-list" class="findings-container">
+        <!-- Rendered by app.js -->
+        <div class="empty-state">
+          <div class="empty-icon">🛡️</div>
+          <div class="empty-title">Ready for audit</div>
+          <div class="empty-desc">Click <strong>Run Check</strong> in the toolbar above to evaluate current code against baseline invariants.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Contracts & Symbols Explorer -->
+    <div id="tab-symbols" class="tab-pane">
+      <div class="tab-filter-bar">
+        <div class="filter-group">
+          <button class="filter-chip active" data-sym-filter="all">All</button>
+          <button class="filter-chip" data-sym-filter="function">Functions</button>
+          <button class="filter-chip" data-sym-filter="class">Classes</button>
+          <button class="filter-chip" data-sym-filter="method">Methods</button>
+        </div>
+        <input type="text" id="search-symbols" class="search-input" placeholder="Search symbols or files...">
+      </div>
+
+      <div class="data-table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Kind</th>
+              <th>Symbol Name</th>
+              <th>Parameters Contract</th>
+              <th>Location</th>
+              <th>Exported</th>
+              <th>Complexity</th>
+            </tr>
+          </thead>
+          <tbody id="symbols-table-body">
+            <tr><td colspan="6" style="text-align:center; padding:30px;">Loading symbol contracts...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 3: Dependencies Audit -->
+    <div id="tab-dependencies" class="tab-pane">
+      <div class="tab-filter-bar">
+        <div class="filter-group">
+          <button class="filter-chip active" data-dep-filter="all">All</button>
+          <button class="filter-chip" data-dep-filter="hallucinated">⚠️ Hallucinated Only</button>
+          <button class="filter-chip" data-dep-filter="verified">✅ Verified Only</button>
+        </div>
+        <input type="text" id="search-deps" class="search-input" placeholder="Search package or module...">
+      </div>
+
+      <div class="data-table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Package / Module</th>
+              <th>Language</th>
+              <th>Category</th>
+              <th>Verification Note</th>
+              <th>Imported In</th>
+            </tr>
+          </thead>
+          <tbody id="deps-table-body">
+            <tr><td colspan="6" style="text-align:center; padding:30px;">Auditing dependencies...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 4: Invariants & Rules Editor -->
+    <div id="tab-invariants" class="tab-pane">
+      <div class="config-card">
+        <h3 style="margin-bottom: 16px; font-size:16px;">General Architectural Invariants</h3>
+        <form id="form-config">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="cfg-max-lines">Max File Lines (Strict Modularization)</label>
+              <div class="desc">Triggers drift warning if any module exceeds threshold</div>
+              <input type="number" id="cfg-max-lines" class="form-input" min="50" max="2000" value="400">
+            </div>
+
+            <div class="form-group">
+              <label for="cfg-max-complexity">Max Cyclomatic Complexity</label>
+              <div class="desc">Flags overly complex functions or nesting (>4 levels)</div>
+              <input type="number" id="cfg-max-complexity" class="form-input" min="5" max="100" value="25">
+            </div>
+
+            <div class="toggle-group">
+              <div>
+                <label>Fail on Hallucinated Imports</label>
+                <div class="desc">Block commits when uninstalled packages are imported</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cfg-fail-imports" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="toggle-group">
+              <div>
+                <label>Fail on Ghost Declarations</label>
+                <div class="desc">Block commits when public functions or classes vanish</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cfg-fail-ghost" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="toggle-group">
+              <div>
+                <label>Fail on Secret Leaks</label>
+                <div class="desc">Block commits if API keys, tokens, or credentials appear</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cfg-fail-secrets" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="toggle-group">
+              <div>
+                <label>Fail on Dangerous Calls</label>
+                <div class="desc">Block dangerous functions like eval(), exec(), subprocess</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cfg-fail-dangerous">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end;">
+            <button type="submit" class="btn btn-success">
+              <span>💾</span> Save Invariants to .vibeguard.json
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Tab 5: AI Remediation Prompt -->
+    <div id="tab-prompt" class="tab-pane">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <span style="color:var(--text-secondary); font-size:13px;">
+          Feed this guidance back to Claude, ChatGPT, Cursor, or your local LLM to correct reported drift, then run the audit again:
+        </span>
+        <button id="btn-copy-prompt-tab" class="btn btn-primary btn-sm">
+          <span>📋</span> Copy Prompt to Clipboard
+        </button>
+      </div>
+      <div id="ai-prompt-box" class="code-block">Loading prompt...</div>
+    </div>
+
+    <!-- Tab 6: Vibe Rewind / Time Machine -->
+    <div id="tab-rewind" class="tab-pane">
+      <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:8px; padding:16px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div>
+          <h3 style="margin:0; font-size:15px; font-weight:600;">⏪ AI Session Checkpoint Time Machine</h3>
+          <p style="margin:4px 0 0 0; color:var(--text-muted); font-size:13px;">
+            Capture a checkpoint before AI code edits. Rewind to a saved state, with safety limits for ignored files.
+          </p>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input type="text" id="input-checkpoint-msg" class="search-input" placeholder="Checkpoint note..." style="width:220px;">
+          <button id="btn-create-checkpoint" class="btn btn-primary btn-sm">📸 Checkpoint</button>
+          <button id="btn-quick-rewind" class="btn btn-secondary btn-sm" title="Undo to last checkpoint">⏪ Undo AI Step</button>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table" id="table-checkpoints">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Time</th>
+              <th>Health</th>
+              <th>Message</th>
+              <th>Files Tracked</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-checkpoints">
+            <tr><td colspan="6" class="empty-state">No checkpoints yet. Click '📸 Checkpoint' to create one!</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Switch Project Modal Dialog -->
+  <div id="modal-switch-project" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Switch Active Project</h3>
+        <button id="btn-close-modal" class="close-btn">&times;</button>
+      </div>
+      <form id="form-switch-project">
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label for="input-project-path">Directory Path</label>
+          <input type="text" id="input-project-path" class="form-input" placeholder="/path/to/project" required>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" id="btn-cancel-modal" class="btn btn-secondary">Cancel</button>
+          <button type="submit" class="btn btn-primary">Switch Project</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <script src="/api.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

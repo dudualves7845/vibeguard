@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="171" height="20" role="img" aria-label="Protected: No findings">
+  <title>Protected: No findings</title>
+  <linearGradient id="vg-grad" x2="0" y2="100%">
+    <stop offset="0" stop-color="#fff" stop-opacity=".15"/>
+    <stop offset="1" stop-opacity=".0"/>
+  </linearGradient>
+  <clipPath id="vg-clip">
+    <rect width="171" height="20" rx="4" fill="#fff"/>
+  </clipPath>
+  <g clip-path="url(#vg-clip)">
+    <rect width="90" height="20" fill="#24292e"/>
+    <rect x="90" width="81" height="20" fill="#00c853"/>
+    <rect width="171" height="20" fill="url(#vg-grad)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="110">
+    <g transform="translate(6, 3) scale(0.5833)"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="rgba(255,255,255,0.18)" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" fill="none" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <text aria-hidden="true" x="535" y="145" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="570">Protected</text>
+    <text x="535" y="135" transform="scale(.1)" fill="#ffffff" font-weight="600" textLength="570">Protected</text>
+    <text aria-hidden="true" x="1305" y="145" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="650">No findings</text>
+    <text x="1305" y="135" transform="scale(.1)" fill="#ffffff" font-weight="600" textLength="650">No findings</text>
+  </g>
+</svg>

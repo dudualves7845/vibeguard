@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+import sys
+from pathlib import Path
+
+# Add project root to sys.path so it works directly out of the box
+project_dir = Path(__file__).resolve().parent.parent
+if str(project_dir) not in sys.path:
+    sys.path.insert(0, str(project_dir))
+
+from vibeguard.cli import main
+
+if __name__ == "__main__":
+    sys.exit(main())

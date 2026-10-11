@@ -1,0 +1,83 @@
+name: 'VibeGuard CI'
+description: 'Official GitHub Action for Pull Requests to guard against AI vibe coding drift and broken invariants'
+author: 'VibeGuard'
+branding:
+  icon: 'shield'
+  color: 'green'
+
+inputs:
+  fail-on-drift:
+    description: 'Exit with non-zero status if blocking drift or broken invariants are found'
+    required: false
+    default: 'true'
+  comment-pr:
+    description: 'Post or update a sticky PR comment with the VibeGuard Audit Report'
+    required: false
+    default: 'true'
+  github-token:
+    description: 'GitHub token for posting sticky PR comment'
+    required: false
+    default: '${{ github.token }}'
+  create-patch:
+    description: 'Upload .patch artifact for automatic AI drift remediation'
+    required: false
+    default: 'true'
+  baseline-file:
+    description: 'Path to VibeGuard baseline snapshot'
+    required: false
+    default: '.vibeguard/baseline.json'
+
+outputs:
+  status:
+    description: 'Audit status (pass or fail)'
+    value: ${{ steps.audit.outputs.status }}
+  findings-count:
+    description: 'Total number of drift and invariant findings'
+    value: ${{ steps.audit.outputs.findings-count }}
+  blocking-errors:
+    description: 'Number of blocking critical/error findings'
+    value: ${{ steps.audit.outputs.blocking-errors }}
+  patch-created:
+    description: 'Whether a remediation patch artifact was generated'
+    value: ${{ steps.audit.outputs.patch-created }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run VibeGuard CI Audit
+      id: audit
+      shell: bash
+      env:
+        INPUT_FAIL_ON_DRIFT: ${{ inputs.fail-on-drift }}
+        INPUT_COMMENT_PR: ${{ inputs.comment-pr }}
+        INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
+        INPUT_CREATE_PATCH: ${{ inputs.create-patch }}
+        INPUT_BASELINE_FILE: ${{ inputs.baseline-file }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        VIBEGUARD_ACTION_PATH: ${{ github.action_path }}
+      run: |
+        case "$INPUT_FAIL_ON_DRIFT" in
+          [Ff][Aa][Ll][Ss][Ee]|0|[Nn][Oo]|[Oo][Ff][Ff]) FAIL_FLAG="--no-fail-on-drift" ;;
+          *) FAIL_FLAG="--fail-on-drift" ;;
+        esac
+        case "$INPUT_COMMENT_PR" in
+          [Ff][Aa][Ll][Ss][Ee]|0|[Nn][Oo]|[Oo][Ff][Ff]) COMMENT_FLAG="--no-comment-pr" ;;
+          *) COMMENT_FLAG="--comment-pr" ;;
+        esac
+        case "$INPUT_CREATE_PATCH" in
+          [Ff][Aa][Ll][Ss][Ee]|0|[Nn][Oo]|[Oo][Ff][Ff]) PATCH_FLAG="--no-create-patch" ;;
+          *) PATCH_FLAG="--create-patch" ;;
+        esac
+        python3 -I "$VIBEGUARD_ACTION_PATH/bin/vibeguard" ci \
+          --project "$GITHUB_WORKSPACE" \
+          --baseline "$INPUT_BASELINE_FILE" \
+          --patch-file "vibeguard-remediation.patch" \
+          "$FAIL_FLAG" "$COMMENT_FLAG" "$PATCH_FLAG"
+
+    - name: Upload Remediation Patch
+      if: always() && inputs.create-patch != 'false' && inputs.create-patch != false && steps.audit.outputs.patch-created == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: vibeguard-remediation-patch
+        path: vibeguard-remediation.patch
+        retention-days: 7
