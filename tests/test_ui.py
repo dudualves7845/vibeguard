@@ -15,7 +15,7 @@ import urllib.error
 
 from vibeguard.cli import main
 from vibeguard.config import GuardConfig
-from vibeguard.server import create_server, ThreadedHTTPServer
+from vibeguard.server import RateLimiter, create_server, ThreadedHTTPServer
 from vibeguard.ui import VibeGuardService
 
 
@@ -65,6 +65,13 @@ class TestVibeGuardService(unittest.TestCase):
         self.assertTrue(info["has_config"])
         self.assertFalse(info["has_baseline"])
         self.assertFalse(info["git_hook_installed"])
+
+    def test_get_prompt_without_baseline_returns_unanchored_guidance(self):
+        result = self.service.get_prompt()
+        self.assertIsInstance(result["prompt"], str)
+        self.assertIsInstance(result["summary"], str)
+        self.assertFalse(result["has_baseline"])
+        self.assertIn("unanchored", result["summary"].lower())
 
     def test_update_baseline(self):
         res = self.service.update_baseline()
@@ -288,6 +295,19 @@ class TestHTTPServerIntegration(unittest.TestCase):
         status, ctype, data = self._http_post("/api/patch", {})
         self.assertEqual(status, 200)
         self.assertIn("patch", data)
+
+    def test_api_rate_limiter_returns_http_429_after_limit(self):
+        original_limiter = self.server.rate_limiter
+        self.server.rate_limiter = RateLimiter(max_requests=1, window_secs=60)
+        try:
+            status, _, _ = self._http_get("/api/project")
+            self.assertEqual(status, 200)
+            with self.assertRaises(urllib.error.HTTPError) as raised:
+                self._http_get("/api/project")
+            self.assertEqual(raised.exception.code, 429)
+            raised.exception.close()
+        finally:
+            self.server.rate_limiter = original_limiter
 
     def test_api_symbols_and_dependencies(self):
         status, ctype, content = self._http_get("/api/symbols")

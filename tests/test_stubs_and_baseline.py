@@ -272,6 +272,8 @@ class TestBaselineStatusFeedback(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertTrue((target_dir / ".vibeguard.json").exists())
             self.assertTrue((target_dir / ".vibeguard" / "baseline.json").exists())
+            initialized_config = json.loads((target_dir / ".vibeguard.json").read_text(encoding="utf-8"))
+            self.assertTrue({"*.go", "*.rs", "*.java"}.issubset(set(initialized_config["protected_paths"])))
 
             # 2. check with positional target
             buf = io.StringIO()

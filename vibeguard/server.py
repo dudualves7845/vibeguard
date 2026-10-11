@@ -16,7 +16,7 @@ import time
 from typing import Any, Dict, Optional
 import urllib.parse
 import webbrowser
-from collections import defaultdict
+from collections import OrderedDict, deque
 
 from .ui import VibeGuardService
 
@@ -25,28 +25,39 @@ ASSETS_DIR = Path(__file__).parent / "ui_assets"
 
 
 class RateLimiter:
-    """Token bucket rate limiter for request throttling."""
+    """Thread-safe sliding-window limiter with bounded per-client state."""
 
-    def __init__(self, max_requests: int = 100, window_secs: int = 60):
+    def __init__(self, max_requests: int = 100, window_secs: int = 60, max_clients: int = 4096):
+        if type(max_requests) is not int or max_requests < 1:
+            raise ValueError("max_requests must be a positive integer")
+        if isinstance(window_secs, bool) or not isinstance(window_secs, (int, float)) or window_secs <= 0:
+            raise ValueError("window_secs must be a positive number")
+        if type(max_clients) is not int or max_clients < 1:
+            raise ValueError("max_clients must be a positive integer")
         self.max_requests = max_requests
         self.window_secs = window_secs
-        self.requests: Dict[str, list] = defaultdict(list)
+        self.max_clients = max_clients
+        self.requests = OrderedDict()
+        self._lock = threading.Lock()
 
     def is_allowed(self, client_id: str) -> bool:
         """Check if client is within rate limit. Returns True if allowed, False if throttled."""
-        now = time.time()
+        now = time.monotonic()
         cutoff = now - self.window_secs
-        
-        # Remove old requests outside the window
-        self.requests[client_id] = [t for t in self.requests[client_id] if t > cutoff]
-        
-        # Check if limit exceeded
-        if len(self.requests[client_id]) >= self.max_requests:
-            return False
-        
-        # Record this request
-        self.requests[client_id].append(now)
-        return True
+
+        with self._lock:
+            client_requests = self.requests.pop(client_id, deque())
+            while client_requests and client_requests[0] <= cutoff:
+                client_requests.popleft()
+
+            allowed = len(client_requests) < self.max_requests
+            if allowed:
+                client_requests.append(now)
+            if client_requests:
+                self.requests[client_id] = client_requests
+                if len(self.requests) > self.max_clients:
+                    self.requests.popitem(last=False)
+            return allowed
 
 
 class VibeGuardRequestHandler(BaseHTTPRequestHandler):

@@ -11,6 +11,7 @@ import unittest
 from vibeguard.cli import cmd_mcp
 from vibeguard.mcp import (
     MCPServer,
+    _norm_path,
     get_config_snippets,
     install_antigravity_config,
     install_cursor_config,
@@ -188,6 +189,23 @@ class TestMCPServer(unittest.TestCase):
         self.assertEqual(res["max_file_lines"], 50)
         self.assertTrue(res["fail_on_hallucinated_imports"])
         self.assertEqual(len(res["rules"]), 3)
+
+    def test_project_paths_reject_parent_and_absolute_traversal(self):
+        with self.assertRaisesRegex(ValueError, "Path traversal"):
+            _norm_path("../../outside.txt", self.root)
+        with self.assertRaisesRegex(ValueError, "Path traversal"):
+            _norm_path(str(self.root.parent / "outside.txt"), self.root)
+        self.assertEqual(_norm_path("module.py", self.root), "module.py")
+
+    def test_project_paths_reject_symlink_escape(self):
+        with tempfile.TemporaryDirectory() as external:
+            link = self.root / "external-link"
+            try:
+                link.symlink_to(external, target_is_directory=True)
+            except (OSError, NotImplementedError) as exc:
+                self.skipTest(f"symlinks are unavailable: {exc}")
+            with self.assertRaisesRegex(ValueError, "Path traversal"):
+                _norm_path("external-link/secret.txt", self.root)
 
     def test_tool_check_variants(self):
         # 1. Full check

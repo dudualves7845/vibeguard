@@ -60,6 +60,13 @@ def process_payment(amount):
         self.assertEqual(report.total_findings, 0)
         self.assertFalse(report.has_blocking_errors)
 
+    def test_stub_remediation_is_complete(self):
+        self.app_file.write_text("def calculate_discount(price, rate):\n    pass\n", encoding="utf-8")
+        report = DriftEngine(str(self.project_path), self.config).evaluate()
+        stub = next(f for f in report.findings if f.category == "stub_injected")
+        self.assertIn("Complete implementation and test before shipping to production.", stub.remediation)
+        self.assertNotIn("[...]", stub.remediation)
+
     def test_detects_removed_public_function(self):
         # AI vibe coding removed process_payment!
         self.app_file.write_text(

@@ -173,11 +173,15 @@ class VibeGuardService:
         """Retrieves formatted AI remediation guidance."""
         self.run_check()
         report = self.last_report
+        summary = RemediationGenerator.generate_summary(report)
+        if not report.has_baseline:
+            summary += " | Unanchored: no baseline snapshot found"
         return {
             "prompt": RemediationGenerator.generate_ai_prompt(report),
-            "summary": RemediationGenerator.generate_summary(report),
+            "summary": summary,
             "has_blocking_errors": report.has_blocking_errors,
             "total_findings": report.total_findings,
+            "has_baseline": report.has_baseline,
         }
 
     @project_operation

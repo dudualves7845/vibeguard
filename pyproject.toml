@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vibeguard"
-version = "1.0.0"
+dynamic = ["version"]
 description = "The AI Vibe Coding Invariant & Drift Engine"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -44,6 +44,9 @@ vibeguard = "vibeguard.cli:main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["vibeguard*"]
+
+[tool.setuptools.dynamic]
+version = { attr = "vibeguard.__version__" }
 
 [tool.setuptools.package-data]
 vibeguard = ["ui_assets/*"]
