@@ -174,8 +174,6 @@ class DriftEngine:
                         )
                     )
                 else:
-                    # Legacy baselines have names/parameters only. Match those
-                    # when possible without requiring metadata they never stored.
                     c_sym = next((s for s in candidates if s.get("parameters", []) == b_sym.get("parameters", [])), candidates[0])
                     if not c_sym.get("is_exported", True) or c_sym.get("kind") != b_sym.get("kind"):
                         findings.append(DriftFinding(
@@ -213,7 +211,6 @@ class DriftEngine:
             lang = c_info.get("language")
             total_lines = c_info.get("total_lines", 0)
 
-            # 1. File bloat check
             if total_lines > self.config.max_file_lines:
                 findings.append(
                     DriftFinding(
@@ -227,7 +224,6 @@ class DriftEngine:
                     )
                 )
 
-            # 2. Secret leak checks
             for sec in c_info.get("secret_findings", []):
                 findings.append(
                     DriftFinding(
@@ -241,7 +237,6 @@ class DriftEngine:
                     )
                 )
 
-            # 3. Dangerous calls check
             for dc in c_info.get("dangerous_calls", []):
                 sev = "error" if self.config.fail_on_dangerous_calls else "warning"
                 findings.append(
@@ -256,7 +251,6 @@ class DriftEngine:
                     )
                 )
 
-            # 4. Injected placeholders or empty stubs
             for ph in c_info.get("placeholders", []):
                 ph_text = ph.get("text", "")
                 if "vibeguard:exempt" in ph_text or "Auto-restored" in ph_text:
@@ -266,8 +260,14 @@ class DriftEngine:
                     sev = "error"
                 else:
                     sev = "error" if self.config.fail_on_ghost_declarations and kind in ("empty_stub", "duplicate_declaration", "unimplemented_error") else "warning"
-                title = f"Duplicate symbol declaration: [{kind}]" if kind == "duplicate_declaration" else f"Unfinished placeholder or stub: [{kind}]"
-                remedy = "Consolidate duplicate implementations or rename function to prevent silent overwriting." if kind == "duplicate_declaration" else "Complete implementation before shipping vibe-coded changes."
+
+                if kind == "duplicate_declaration":
+                    title = f"Duplicate symbol declaration: [{kind}]"
+                    remedy = "Consolidate duplicate implementations or rename function to prevent silent overwriting."
+                else:
+                    title = f"Unfinished placeholder or stub: [{kind}]"
+                    remedy = "Complete implementation and test before shipping to production."
+
                 findings.append(
                     DriftFinding(
                         category="duplicate_declaration" if kind == "duplicate_declaration" else "stub_injected",
@@ -280,7 +280,6 @@ class DriftEngine:
                     )
                 )
 
-            # 5. Hallucinated imports
             if self.config.fail_on_hallucinated_imports:
                 for imp in c_info.get("imports", []):
                     missing_msg = None
@@ -303,7 +302,6 @@ class DriftEngine:
                             remediation=missing_msg[2],
                         ))
 
-            # 6. Intent rules & cyclomatic complexity
             self._check_intent_rules(rel_path, c_info, findings)
 
     def _check_intent_rules(
@@ -312,7 +310,6 @@ class DriftEngine:
         c_info: Dict[str, Any],
         findings: List[DriftFinding],
     ) -> None:
-        # Check global complexity threshold
         max_allowed_cc = self.config.max_cyclomatic_complexity
         for sym in c_info.get("symbols", []):
             cc = sym.get("complexity", 1)
@@ -329,7 +326,6 @@ class DriftEngine:
                     )
                 )
 
-        # Check explicit user rules
         for rule in self.config.rules:
             if rule.target_patterns:
                 matches = any(fnmatch.fnmatch(rel_path, pat) for pat in rule.target_patterns)

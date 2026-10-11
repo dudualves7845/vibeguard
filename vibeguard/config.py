@@ -29,8 +29,11 @@ class IntentRule:
 
     def __post_init__(self) -> None:
         for name in ("id", "description", "rule_type"):
-            if not isinstance(getattr(self, name), str):
+            val = getattr(self, name)
+            if not isinstance(val, str):
                 raise ValueError(f"Rule {name} must be a string")
+            if not val.strip():
+                raise ValueError(f"Rule {name} cannot be empty")
         _strings(self.target_patterns, "Rule target_patterns")
         if not isinstance(self.parameters, dict):
             raise ValueError("Rule parameters must be an object")

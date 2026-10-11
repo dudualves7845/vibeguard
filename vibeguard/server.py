@@ -16,11 +16,37 @@ import time
 from typing import Any, Dict, Optional
 import urllib.parse
 import webbrowser
+from collections import defaultdict
 
 from .ui import VibeGuardService
 
 
 ASSETS_DIR = Path(__file__).parent / "ui_assets"
+
+
+class RateLimiter:
+    """Token bucket rate limiter for request throttling."""
+
+    def __init__(self, max_requests: int = 100, window_secs: int = 60):
+        self.max_requests = max_requests
+        self.window_secs = window_secs
+        self.requests: Dict[str, list] = defaultdict(list)
+
+    def is_allowed(self, client_id: str) -> bool:
+        """Check if client is within rate limit. Returns True if allowed, False if throttled."""
+        now = time.time()
+        cutoff = now - self.window_secs
+        
+        # Remove old requests outside the window
+        self.requests[client_id] = [t for t in self.requests[client_id] if t > cutoff]
+        
+        # Check if limit exceeded
+        if len(self.requests[client_id]) >= self.max_requests:
+            return False
+        
+        # Record this request
+        self.requests[client_id].append(now)
+        return True
 
 
 class VibeGuardRequestHandler(BaseHTTPRequestHandler):
@@ -128,6 +154,12 @@ class VibeGuardRequestHandler(BaseHTTPRequestHandler):
             raise ValueError(f"Failed to parse request JSON body: {e}")
 
     def do_GET(self) -> None:
+        # Rate limiting check
+        client_ip = self.client_address[0]
+        if not self.server.rate_limiter.is_allowed(client_ip):
+            self._send_error_json("Rate limit exceeded: max 100 requests per 60 seconds", status=429)
+            return
+
         parsed_url = urllib.parse.urlparse(self.path)
         path = parsed_url.path
         if not self._valid_origin_host():
@@ -190,6 +222,12 @@ class VibeGuardRequestHandler(BaseHTTPRequestHandler):
             self._send_error_json(str(e), status=500)
 
     def do_POST(self) -> None:
+        # Rate limiting check
+        client_ip = self.client_address[0]
+        if not self.server.rate_limiter.is_allowed(client_ip):
+            self._send_error_json("Rate limit exceeded: max 100 requests per 60 seconds", status=429)
+            return
+
         parsed_url = urllib.parse.urlparse(self.path)
         path = parsed_url.path
         if not self._authorize_api():
@@ -295,6 +333,7 @@ def create_server(
     server.service = service or VibeGuardService()
     server.api_token = secrets.token_urlsafe(32)
     server.allowed_hostnames = {host.lower(), "localhost", "127.0.0.1", server.server_address[0]}
+    server.rate_limiter = RateLimiter(max_requests=100, window_secs=60)
     return server
 
 

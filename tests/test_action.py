@@ -7,6 +7,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
+from typing import Any
 import urllib.error
 
 from vibeguard.cli import main
@@ -209,7 +210,8 @@ class TestStepSummaryAndOutputs(unittest.TestCase):
     def test_write_step_summary(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             summary_file = Path(tmpdir) / "summary.md"
-            self.assertFalse(write_step_summary("Hello", summary_file=None))
+            with patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": ""}):
+                self.assertFalse(write_step_summary("Hello", summary_file=None))
 
             with patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": str(summary_file)}):
                 res = write_step_summary("# Test Summary")
@@ -219,7 +221,8 @@ class TestStepSummaryAndOutputs(unittest.TestCase):
     def test_write_github_outputs(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             out_file = Path(tmpdir) / "outputs.txt"
-            self.assertFalse(write_github_outputs({"key": "val"}, output_file=None))
+            with patch.dict(os.environ, {"GITHUB_OUTPUT": ""}):
+                self.assertFalse(write_github_outputs({"key": "val"}, output_file=None))
 
             with patch.dict(os.environ, {"GITHUB_OUTPUT": str(out_file)}):
                 res = write_github_outputs({"status": "pass", "count": 0})
@@ -227,6 +230,12 @@ class TestStepSummaryAndOutputs(unittest.TestCase):
                 content = out_file.read_text(encoding="utf-8")
                 self.assertIn("status=pass\n", content)
                 self.assertIn("count=0\n", content)
+
+
+class TestCIWorkflowConfiguration(unittest.TestCase):
+    def test_workflow_uses_local_action_checkout(self):
+        workflow = Path(__file__).parents[1] / ".github" / "workflows" / "vibeguard.yml"
+        self.assertIn("uses: ./", workflow.read_text(encoding="utf-8"))
 
 
 class TestPRCommentBot(unittest.TestCase):
